@@ -4,7 +4,7 @@ $(_ => {
       bibleID: 'es',
       addViewer: "Añadir Pantalla",
       showYearText: "Mostrar Texto del Año",
-      title: "Ayudante Para Reuniones",
+      title: "JW Reuniones",
       viewerTitleTemplate: 'Presentando "$&"',
       viewerYearTextTitle: "Presentando El Texto del Año",
       tabs: {

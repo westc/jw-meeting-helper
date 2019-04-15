@@ -50,7 +50,10 @@
 .verse-viewer .foreground {
   height: 100%;
   width: 100%;
-  text-shadow: 0 0 0.125em #000, 0 0 0.125em #000, 0 0 0.125em #000;
+  text-shadow:
+    0 0 0.25em #000,
+    0 0 0.25em #000,
+    0 0 0.25em #000;
   color: #FFF;
   position: relative;
   z-index: 1;
