@@ -1,6 +1,12 @@
 (_ => {
+  const RGX_CUSTOM_TEXT = /(\S+(?:[^\r\n]+\S+)*)[^\r\n]([1-9]\d*):(([1-9]\d*)(?:-([1-9]\d*)|(?:([^\S\r\n]*,[^\S\r\n]*)[1-9]\d*)+)?)/g;
+  
   const BLANK_PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQYV2NgAAIAAAUAAarVyFEAAAAASUVORK5CYII=';
   const BLANK_IMAGE = { src: `url('code/year-text.jpg'), url('${BLANK_PIXEL}')` };
+
+  const LOCAL_STORAGE_EXISTS = 'undefined' !== typeof Storage && 'undefined' !== typeof localStorage;
+
+  const NAME_CUSTOM_TEXTS = 'customTexts';
 
   let jFileInput = $('#fileInput');
 
@@ -9,6 +15,21 @@
   let { head } = document;
 
   let myVue;
+
+  function save(name, value) {
+    if (LOCAL_STORAGE_EXISTS) {
+      localStorage.setItem(name, value);
+    }
+    return LOCAL_STORAGE_EXISTS;
+  }
+
+  function load(name, opt_default) {
+    if (LOCAL_STORAGE_EXISTS) {
+      let result = localStorage.getItem(name);
+      return result === null ? opt_default : result;
+    }
+    return opt_default;
+  }
 
   init = function(initOptions) {
     let { translations } = initOptions;
@@ -26,6 +47,8 @@
         }
       });
     }
+
+    $('body').addClass(isViewer ? 'is-viewer' : 'is-main');
     
     myVue = new Vue({
       el: '#myVue',
@@ -37,7 +60,9 @@
         TEXTS: translations,
         selectedBook: null,
         selectedChapter: null,
-        selectedVerse: null
+        selectedVerse: null,
+        customTexts: load(NAME_CUSTOM_TEXTS),
+        customTextsList: []
       },
       computed: {
         selectedVerseText() {
@@ -57,17 +82,23 @@
         viewBookChapter(num) {
           let index = num - 1;
           let book = this.selectedBook;
+          this.retrieveBook(book, _ => {
+            this.selectedChapter = book.chapters[index];
+          });
+        },
+        retrieveBook(book, onDone) {
+          let arrArgs = YourJS.slice(arguments, 2);
           YourJS.poll(
             (prevent, callCount) => {
-              let result = book.chapters[index];
-              if (!result && callCount === 1) {
+              let chapters = book.chapters;
+              if (chapters.length > 0) {
+                return arrArgs;
+              }
+              else if (callCount === 1) {
                 head.appendChild(YourJS.dom({ _: 'script', src: `bible/bible-${bibleID}.book-${book.id}.js` }));
               }
-              return result;
             },
-            chapter => {
-              this.selectedChapter = chapter;
-            }
+            onDone
           );
         },
         getTextFor(path) {
@@ -97,27 +128,118 @@
           input.value = input.defaultValue;
         },
         showImage(image) {
-          this.viewers.forEach(viewer => {
-            if (!viewer.closed) {
-              viewer.postMessage(image, '*');
-            }
-          });
+          this.sendViewerData(image);
         },
         showVerse(verseIndex) {
           let book = this.selectedBook;
           let chapter = this.selectedChapter;
-          let data = {
+          this.sendViewerData({
             bookName: book.name,
             chapterNumber: +chapter.num,
             verseNumber: verseIndex + 1,
             text: chapter.verses[verseIndex]
-          };
+          });
+        },
+        showCustomVerse(book, chapter, verse) {
+          this.sendViewerData({
+            bookName: book.name,
+            chapterNumber: +chapter.num,
+            verseNumber: verse.number,
+            text: verse.text
+          });
+        },
+        sendViewerData(data) {
           this.viewers.forEach(viewer => {
             if (!viewer.closed) {
               viewer.postMessage(data, '*');
             }
           });
-        }
+        },
+        updateCustomTextsList: YourJS.debounce(function () {
+          const CTX_CUSTOM_TEXTS = this.TEXTS.tabs.bible.customTexts;
+
+          let customTexts = this.customTexts;
+
+          this.customTextsList = (YourJS.execAll(RGX_CUSTOM_TEXT, customTexts) || [])
+            .map(([match, bookName, chapter, verses, verse1, vHyphen, vComma]) => {
+              let result = { source: match };
+
+              let rgxBookName = new RegExp(
+                '^' + YourJS.deburr(bookName).replace(/\./g, '').replace(/\S+/g, '$&\\S*').replace(/\s+/g, '\\s+') + '$',
+                'i'
+              );
+
+              let books = this.testaments.reduce(
+                (carry, testament) => carry.concat(
+                  testament.books.filter(
+                    ({ name, abbr }) => rgxBookName.test(YourJS.deburr(name))
+                      || rgxBookName.test(YourJS.deburr(abbr))
+                  )
+                ),
+                []
+              );
+
+              if (books.length === 1) {
+                let book = books[0];
+                chapter = +chapter;
+                verses = vHyphen
+                  ? YourJS.span(+verse1, +vHyphen)
+                  : vComma
+                    ? verses.split(/\s*,\s*/).map(v => +v)
+                    : [+verse1];
+
+                if (chapter > book.chapterCount) {
+                  result.error = CTX_CUSTOM_TEXTS.chapterCountExceeded;
+                }
+                else {
+                  let objChapter = book.chapters[chapter - 1];
+                  if (!objChapter) {
+                    result.error = `${CTX_CUSTOM_TEXTS.openingBook}\t${book.name}`;
+                    this.retrieveBook(book, _ => this.updateCustomTextsList());
+                  }
+                  else {
+                    let arrVerses = objChapter.verses;
+                    let objVerses = verses.reduce(
+                      (carry, v) => {
+                        let result = { number: v, text: arrVerses[v - 1] };
+                        carry[result.text ? 'valid' : 'invalid'].push(result);
+                        return carry;
+                      },
+                      { invalid: [], valid: [] }
+                    );
+                    if (objVerses.invalid.length) {
+                      result.error = CTX_CUSTOM_TEXTS.invalidVerses
+                        + '\t'
+                        + book.name
+                        + ' '
+                        + chapter
+                        + ':'
+                        + objVerses.invalid.map(v => v.number).join(', ');
+                    }
+                    else {
+                      result.book = book;
+                      result.chapter = objChapter;
+                      result.verses = objVerses.valid;
+                    }
+                  }
+                }
+              }
+              else if (books.length === 0) {
+                result.error = `${CTX_CUSTOM_TEXTS.bookNotFound}\t${bookName}`;
+              }
+              else {
+                result.error = [CTX_CUSTOM_TEXTS.bookAbbrInvalid].concat(books.map(({ name }) => name)).join('\n- ');
+              }
+
+              if (result.error) {
+                result.error = `${CTX_CUSTOM_TEXTS.errorStart}\t${match}\n\n${result.error}`;
+              }
+
+              return result;
+            });
+
+          save(NAME_CUSTOM_TEXTS, customTexts);
+        }, 1000)
       },
       watch: {
         images() {
@@ -128,6 +250,9 @@
                 ? this.images[0].name.replace(/[^]+/, this.TEXTS.viewerTitleTemplate)
                 : this.TEXTS.viewerYearTextTitle
             : this.TEXTS.title;
+        },
+        customTexts() {
+          this.updateCustomTextsList();
         }
       },
       mounted: function() {
@@ -144,6 +269,9 @@
               this.selectedVerse = null;
             }
           });
+        }
+        else {
+          this.updateCustomTextsList();
         }
         this.images = [BLANK_IMAGE];
       },
