@@ -25,7 +25,7 @@
 <body>
   <div id="myVue" v-cloak>
     <template v-if="isViewer">
-      <div v-bind:class="'viewer' + (selectedVerse ? '' : ' visible')" v-bind:style="!selectedVerse ? 'background-image: ' + images[0].src + ';' : ''"></div>
+      <div v-bind:class="'viewer' + (selectedVerse ? '' : ' visible')" v-bind:style="!selectedVerse ? 'background-image: ' + getImageCssSrc(images[0]) + ';' : ''"></div>
       <div v-bind:class="'viewer verse-viewer' + (selectedVerse ? ' visible' : '')" ref="viewer">
         <div class="background"></div>
         <div v-if="selectedVerse" class="foreground d-table">
@@ -79,130 +79,127 @@
             </div>
           </div>
           <div class="d-table-row">
-            <div class="d-table-cell" style="height: 99%;">
-              <div id="tabsContent" class="py-3">
-                <div class="container-fluid">
-                  <div class="row">
-                    <div class="col-12">
-                      <div class="tab-content">
-                        <div class="tab-pane fade show active" id="images" role="tabpanel" aria-labelledby="images-tab">
+            <div class="d-table-cell h-99">
+              <div class="tab-content h-100 p-relative">
+                <div id="images" class="tab-pane fade show active py-3" role="tabpanel" aria-labelledby="images-tab">
+                  <div class="container-fluid">
+                    <div class="row">
+                      <div class="col-12">
+                        <div class="input-group mb-3">
+                          <div class="input-group-prepend">
+                            <span class="input-group-text" id="inputGroupFileAddon01">{{ TEXTS.tabs.images.search }}</span>
+                          </div>
+                          <div class="custom-file">
+                            <input type="file" class="custom-file-input" id="inputGroupFile01" aria-describedby="inputGroupFileAddon01" multiple accept="image/*"
+                              v-on:change="onFilesSelected">
+                            <label class="custom-file-label" for="inputGroupFile01">{{ TEXTS.tabs.images.selectImages }}</label>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-lg-3 col-md-4 col-sm-6 my-3" v-for="(image, imageIndex) in images">
+                        <div class="thumbnail has-tooltip" ref="divImages" v-bind:style="'position: relative; background-image: ' + getImageCssSrc(image) + ';'" v-on:click="showImage(image)"
+                          v-bind:data-original-title="image.name">
+                          <div class="image-options" v-if="image.canEdit">
+                            <div class="gray option" @click="rotate90(image, -1)"><i class="fa fa-rotate-left"></i></div>
+                            <div class="gray option" @click="rotate90(image, 1)"><i class="fa fa-rotate-right"></i></div>
+                            <div class="red option" @click="removeImage(imageIndex)"><i class="fa fa-trash"></i></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div id="bible" class="tab-pane fade p-3" role="tabpanel" aria-labelledby="bible-tab">
+                  <div class="accordion" id="accordionBible">
+                    <div class="card">
+                      <div class="card-header" id="headingBibleExplorer">
+                        <h2 class="mb-0">
+                          <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseBibleExplorer" aria-expanded="true"
+                            aria-controls="collapseBibleExplorer">
+                            {{ TEXTS.tabs.bible.explorer.title }}
+                          </button>
+                        </h2>
+                      </div>
+                      <div id="collapseBibleExplorer" class="collapse show" aria-labelledby="headingBibleExplorer" data-parent="#accordionBible">
+                        <div class="card-body">
                           <div class="container-fluid">
-                            <div class="row">
+                            <div v-if="selectedChapter" class="row">
                               <div class="col-12">
-                                <div class="input-group mb-3">
-                                  <div class="input-group-prepend">
-                                    <span class="input-group-text" id="inputGroupFileAddon01">{{ TEXTS.tabs.images.search }}</span>
-                                  </div>
-                                  <div class="custom-file">
-                                    <input type="file" class="custom-file-input" id="inputGroupFile01" aria-describedby="inputGroupFileAddon01" multiple accept="image/*"
-                                      v-on:change="onFilesSelected">
-                                    <label class="custom-file-label" for="inputGroupFile01">{{ TEXTS.tabs.images.selectImages }}</label>
-                                  </div>
+                                <div class="lead">
+                                  <button class="btn btn-danger btn-sm" v-on:click="unsetChapter">
+                                    <i class="fa fa-arrow-left"></i>
+                                  </button>
+                                  {{ selectedBook.name }} {{ selectedChapter.num }}
                                 </div>
                               </div>
-                              <div class="col-lg-3 col-md-4 col-sm-6 my-3" v-for="image in images">
-                                <div class="thumbnail has-tooltip" v-bind:style="'position: relative; background-image: ' + image.src + ';'" v-on:click="showImage(image)"
-                                  v-bind:data-original-title="image.name">
+                              <div class="col-12">
+                                <template v-for="(verse, verseIndex) in selectedChapter.verses">
+                                  <br v-if="verse.startsWith('\n')" />
+                                  <div class="verse" v-on:click="showVerse(verseIndex)">
+                                    <span class="number">{{ verseIndex + 1 }}</span>
+                                    {{ verse.trim() }}
+                                  </div>
+                                </template>
+                              </div>
+                            </div>
+                            <div v-else-if="selectedBook" class="row">
+                              <div class="col-12">
+                                <div class="lead">
+                                  <button class="btn btn-danger btn-sm" v-on:click="unsetBook">
+                                    <i class="fa fa-arrow-left"></i>
+                                  </button>
+                                  {{ selectedBook.name }}
                                 </div>
+                              </div>
+                              <div v-for="bookChapter in selectedBook.chapterCount" class="col-lg-1 col-md-2 col-sm-3 col-4 text-center my-1">
+                                <a href="javascript:;" class="bible-selector py-1 has-tooltip" v-bind:data-original-title="selectedBook.name + ' ' + bookChapter"
+                                  v-on:click="viewBookChapter(bookChapter)">
+                                  {{ bookChapter }}
+                                </a>
+                              </div>
+                            </div>
+                            <div v-else v-for="testament in testaments" class="row">
+                              <div class="col-12">
+                                <div class="lead">{{ testament.heading }}</div>
+                              </div>
+                              <div v-for="book in testament.books" class="col-lg-2 col-md-3 col-sm-4 col-6 text-center my-1">
+                                <a href="javascript:;" class="bible-selector py-1 has-tooltip" v-bind:data-original-title="book.name" v-on:click="viewBook(book)">
+                                  {{ book.abbr }}
+                                </a>
                               </div>
                             </div>
                           </div>
                         </div>
-                        <div class="tab-pane fade" id="bible" role="tabpanel" aria-labelledby="bible-tab">
-                          <div class="accordion" id="accordionBible">
-                            <div class="card">
-                              <div class="card-header" id="headingBibleExplorer">
-                                <h2 class="mb-0">
-                                  <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseBibleExplorer" aria-expanded="true"
-                                    aria-controls="collapseBibleExplorer">
-                                    {{ TEXTS.tabs.bible.explorer.title }}
-                                  </button>
-                                </h2>
-                              </div>
-                              <div id="collapseBibleExplorer" class="collapse show" aria-labelledby="headingBibleExplorer" data-parent="#accordionBible">
-                                <div class="card-body">
-                                  <div class="container-fluid">
-                                    <div v-if="selectedChapter" class="row">
-                                      <div class="col-12">
-                                        <div class="lead">
-                                          <button class="btn btn-danger btn-sm" v-on:click="unsetChapter">
-                                            <i class="fa fa-arrow-left"></i>
-                                          </button>
-                                          {{ selectedBook.name }} {{ selectedChapter.num }}
-                                        </div>
-                                      </div>
-                                      <div class="col-12">
-                                        <template v-for="(verse, verseIndex) in selectedChapter.verses">
-                                          <br v-if="verse.startsWith('\n')" />
-                                          <div class="verse" v-on:click="showVerse(verseIndex)">
-                                            <span class="number">{{ verseIndex + 1 }}</span>
-                                            {{ verse.trim() }}
-                                          </div>
-                                        </template>
-                                      </div>
-                                    </div>
-                                    <div v-else-if="selectedBook" class="row">
-                                      <div class="col-12">
-                                        <div class="lead">
-                                          <button class="btn btn-danger btn-sm" v-on:click="unsetBook">
-                                            <i class="fa fa-arrow-left"></i>
-                                          </button>
-                                          {{ selectedBook.name }}
-                                        </div>
-                                      </div>
-                                      <div v-for="bookChapter in selectedBook.chapterCount" class="col-lg-1 col-md-2 col-sm-3 col-4 text-center my-1">
-                                        <a href="javascript:;" class="bible-selector py-1 has-tooltip" v-bind:data-original-title="selectedBook.name + ' ' + bookChapter"
-                                          v-on:click="viewBookChapter(bookChapter)">
-                                          {{ bookChapter }}
-                                        </a>
-                                      </div>
-                                    </div>
-                                    <div v-else v-for="testament in testaments" class="row">
-                                      <div class="col-12">
-                                        <div class="lead">{{ testament.heading }}</div>
-                                      </div>
-                                      <div v-for="book in testament.books" class="col-lg-2 col-md-3 col-sm-4 col-6 text-center my-1">
-                                        <a href="javascript:;" class="bible-selector py-1 has-tooltip" v-bind:data-original-title="book.name" v-on:click="viewBook(book)">
-                                          {{ book.abbr }}
-                                        </a>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
+                      </div>
+                    </div>
+                    <div class="card">
+                      <div class="card-header" id="headingTwo">
+                        <h2 class="mb-0">
+                          <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false"
+                            aria-controls="collapseTwo">
+                            {{ TEXTS.tabs.bible.customTexts.title }}
+                          </button>
+                        </h2>
+                      </div>
+                      <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionBible">
+                        <div class="card-body">
+                          <div class="form-group">
+                            <label for="txtCustomTexts">{{ TEXTS.tabs.bible.customTexts.boxLabel }}</label>
+                            <textarea class="form-control" id="txtCustomTexts" rows="10" v-model="customTexts" v-bind:placeholder="TEXTS.tabs.bible.customTexts.boxPlaceholder"></textarea>
+                          </div>
+                          <div v-for="customText in customTextsList" class="card">
+                            <div v-bind:class="'card-header' + (customText.error ? ' text-white bg-danger' : '')">
+                              {{ customText.source }}
                             </div>
-                            <div class="card">
-                              <div class="card-header" id="headingTwo">
-                                <h2 class="mb-0">
-                                  <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false"
-                                    aria-controls="collapseTwo">
-                                    {{ TEXTS.tabs.bible.customTexts.title }}
-                                  </button>
-                                </h2>
-                              </div>
-                              <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionBible">
-                                <div class="card-body">
-                                  <div class="form-group">
-                                    <label for="txtCustomTexts">{{ TEXTS.tabs.bible.customTexts.boxLabel }}</label>
-                                    <textarea class="form-control" id="txtCustomTexts" rows="10" v-model="customTexts" v-bind:placeholder="TEXTS.tabs.bible.customTexts.boxPlaceholder"></textarea>
-                                  </div>
-                                  <div v-for="customText in customTextsList" class="card">
-                                    <div v-bind:class="'card-header' + (customText.error ? ' text-white bg-danger' : '')">
-                                      {{ customText.source }}
-                                    </div>
-                                    <div class="card-body">
-                                      <pre v-if="customText.error"><code>{{ customText.error }}</code></pre>
-                                      <template v-else v-for="(verse, index) in customText.verses">
-                                        <br v-if="index &gt; 0 &amp;&amp; verse.text.startsWith('\n')" />
-                                        <div class="verse" v-on:click="showCustomVerse(customText.book, customText.chapter, verse)">
-                                          <span class="number">{{ verse.number }}</span>
-                                          {{ verse.text.trim() }}
-                                        </div>
-                                      </template>
-                                    </div>
-                                  </div>
+                            <div class="card-body">
+                              <pre v-if="customText.error"><code>{{ customText.error }}</code></pre>
+                              <template v-else v-for="(verse, index) in customText.verses">
+                                <br v-if="index &gt; 0 &amp;&amp; verse.text.startsWith('\n')" />
+                                <div class="verse" v-on:click="showCustomVerse(customText.book, customText.chapter, verse)">
+                                  <span class="number">{{ verse.number }}</span>
+                                  {{ verse.text.trim() }}
                                 </div>
-                              </div>
+                              </template>
                             </div>
                           </div>
                         </div>

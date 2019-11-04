@@ -1,6 +1,8 @@
 [v-cloak] {
   display: none;
 }
+.h-99 { height: 99%; }
+.p-relative { position: relative; }
 * {
   transition: 1s ease all;
 }
@@ -14,11 +16,13 @@ body.is-viewer {
   right: 0;
   bottom: 0;
 }
-#tabsContent {
-  height: 100%;
+#images, #bible {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow: auto;
-  overflow-x: hidden;
-  box-sizing: border-box;
 }
 .thumbnail {
   height: 200px;
@@ -104,4 +108,45 @@ body.is-viewer {
 }
 .p-verse {
   padding: 1em;
+}
+.image-options {
+  font-family: "Arial Black", Tahoma;
+  font-size: 1.25em;
+  font-weight: bold;
+  position: absolute;
+  top: 0.5em;
+  left: 0.5em;
+  right: 0.5em;
+  text-align: right;
+}
+.image-options .option {
+  text-align: center;
+  width: 1.25em;
+  height: 1.25em;
+  line-height: 1.25em;
+  border-radius: 1em;
+  transition: 0.5s ease all;
+  display: inline-block;
+}
+.image-options .option.red {
+  color: #F00;
+  background-color: rgba(255,255,255,0.75);
+  box-shadow: 0 0 0.25em rba(255,255,255);
+}
+.image-options .option.red:hover,
+.image-options .option.red:hover * {
+  color: rgb(255,255,255);
+  background-color: rgba(255,0,0,0.75);
+  box-shadow: 0 0 0.25em #F00;
+}
+.image-options .option.gray {
+  color: rgb(0,0,0);
+  background-color: rgba(255,255,255,0.75);
+  box-shadow: 0 0 0.25em rgb(255,255,255);
+}
+.image-options .option.gray:hover,
+.image-options .option.gray:hover * {
+  color: rgb(255,255,255);
+  background-color: rgba(128,128,128,0.75);
+  box-shadow: 0 0 0.25em rgb(128,128,128);
 }

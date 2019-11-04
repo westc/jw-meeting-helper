@@ -2,7 +2,15 @@
   const RGX_CUSTOM_TEXT = /(\S+(?:[^\r\n]+\S+)*)[^\r\n]([1-9]\d*):(([1-9]\d*)(?:-([1-9]\d*)|(?:([^\S\r\n]*,[^\S\r\n]*)[1-9]\d*)+)?)/g;
   
   const BLANK_PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQYV2NgAAIAAAUAAarVyFEAAAAASUVORK5CYII=';
-  const BLANK_IMAGE = { src: `url('code/year-text.jpg'), url('${BLANK_PIXEL}')` };
+  const BLANK_IMAGE = {
+    cssSrc: YourJS.sub(
+      "url('{text}'), url('{blank}')",
+      {
+        text: 'code/year-text.jpg',
+        blank: BLANK_PIXEL
+      }
+    )
+  };
 
   const LOCAL_STORAGE_EXISTS = 'undefined' !== typeof Storage && 'undefined' !== typeof localStorage;
 
@@ -114,25 +122,68 @@
           this.viewers.forEach(viewer => viewer.close());
         },
         onFilesSelected(e) {
-          let input = e.target;
-          [].forEach.call(input.files, f => {
-            let reader = new FileReader();
-            reader.onload = e => {
-              let images = this.images.slice(1);
-              images.push({ name: f.name, src: `url(${e.target.result})` });
-              images.sort((a, b) => YourJS.compareTitle(a.name, b.name));
-              this.images.splice.apply(this.images, [1, Infinity].concat(images));
+          var input = e.target;
+          var self = this;
+          [].forEach.call(input.files, function(f) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+              var images = self.images.slice(1);
+              images.push({
+                name: f.name,
+                uri: e.target.result,
+                canEdit: true
+              });
+              images.sort(function(a, b) { return YourJS.compareTitle(a.name, b.name); });
+              self.images.splice.apply(self.images, [1, Infinity].concat(images));
             };
             reader.readAsDataURL(f);
           });
           input.value = input.defaultValue;
         },
+        getImageCssSrc(image) {
+
+          return image.cssSrc || YourJS.sub('url({uri})', { uri: image.uri });
+        },
+        rotate90(vueImage, rotations) {
+          rotations = ((~~rotations || 0) % 4 + 4) % 4;
+
+          let canvas = YourJS.dom({ _: 'canvas' });
+          let ctx = canvas.getContext('2d');
+          let img = YourJS.extend(
+            new Image(),
+            {
+              onload: function() {
+                if (rotations % 2) {
+                  canvas.width = img.height;
+                  canvas.height = img.width;
+                }
+                else {
+                  canvas.width = img.width;
+                  canvas.height = img.height;
+                }
+                ctx.rotate(rotations * Math.PI / 2);
+                ctx.translate(rotations < 2 ? 0 : -img.width, rotations % 3 ? -img.height : 0);
+                ctx.drawImage(img, 0, 0);
+                vueImage.uri = canvas.toDataURL();
+
+                img = null;
+                ctx = null;
+                canvas = null;
+              },
+              src: vueImage.uri
+            }
+          );
+        },
         showImage(image) {
           this.sendViewerData(image);
         },
+        removeImage(imageIndex) {
+          $(this.$refs.divImages[imageIndex]).tooltip('dispose');
+          this.images.splice(imageIndex, 1);
+        },
         showVerse(verseIndex) {
-          let book = this.selectedBook;
-          let chapter = this.selectedChapter;
+          var book = this.selectedBook;
+          var chapter = this.selectedChapter;
           this.sendViewerData({
             bookName: book.name,
             chapterNumber: +chapter.num,
@@ -265,7 +316,7 @@
             }
             // Interpret as an image...
             else {
-              this.images = [data.src ? data : BLANK_IMAGE];
+              this.images = [data.uri ? data : BLANK_IMAGE];
               this.selectedVerse = null;
             }
           });
