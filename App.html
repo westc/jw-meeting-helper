@@ -100,9 +100,9 @@
                         <div class="thumbnail has-tooltip" ref="divImages" v-bind:style="'position: relative; background-image: ' + getImageCssSrc(image) + ';'" v-on:click="showImage(image)"
                           v-bind:data-original-title="image.name">
                           <div class="image-options" v-if="image.canEdit">
-                            <div class="gray option" @click="rotate90(image, -1)"><i class="fa fa-rotate-left"></i></div>
-                            <div class="gray option" @click="rotate90(image, 1)"><i class="fa fa-rotate-right"></i></div>
-                            <div class="red option" @click="removeImage(imageIndex)"><i class="fa fa-trash"></i></div>
+                            <div class="gray option" @click="rotate90($event, image, -1)" v-if="!image.isProcessing"><i class="fa fa-rotate-left"></i></div>
+                            <div class="gray option" @click="rotate90($event, image, 1)" v-if="!image.isProcessing"><i class="fa fa-rotate-right"></i></div>
+                            <div class="red option" @click="removeImage($event, image)"><i class="fa fa-times"></i></div>
                           </div>
                         </div>
                       </div>

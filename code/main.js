@@ -131,7 +131,8 @@
               images.push({
                 name: f.name,
                 uri: e.target.result,
-                canEdit: true
+                canEdit: true,
+                isProcessing: false
               });
               images.sort(function(a, b) { return YourJS.compareTitle(a.name, b.name); });
               self.images.splice.apply(self.images, [1, Infinity].concat(images));
@@ -144,8 +145,10 @@
 
           return image.cssSrc || YourJS.sub('url({uri})', { uri: image.uri });
         },
-        rotate90(vueImage, rotations) {
+        rotate90(e, vueImage, rotations) {
           rotations = ((~~rotations || 0) % 4 + 4) % 4;
+
+          vueImage.isProcessing = true;
 
           let canvas = YourJS.dom({ _: 'canvas' });
           let ctx = canvas.getContext('2d');
@@ -164,7 +167,10 @@
                 ctx.rotate(rotations * Math.PI / 2);
                 ctx.translate(rotations < 2 ? 0 : -img.width, rotations % 3 ? -img.height : 0);
                 ctx.drawImage(img, 0, 0);
-                vueImage.uri = canvas.toDataURL();
+                YourJS.extend(vueImage, {
+                  uri: canvas.toDataURL(),
+                  isProcessing: false
+                });
 
                 img = null;
                 ctx = null;
@@ -173,13 +179,21 @@
               src: vueImage.uri
             }
           );
+
+          // Prevent the image from being shown.
+          e.stopPropagation();
         },
-        showImage(image) {
-          this.sendViewerData(image);
+        showImage(vueImage) {
+          this.sendViewerData(vueImage);
         },
-        removeImage(imageIndex) {
+        removeImage(e, vueImage) {
+          let {images} = this;
+          let imageIndex = images.indexOf(vueImage);
           $(this.$refs.divImages[imageIndex]).tooltip('dispose');
-          this.images.splice(imageIndex, 1);
+          images.splice(imageIndex, 1);
+
+          // Prevent the image from being shown.
+          e.stopPropagation();
         },
         showVerse(verseIndex) {
           var book = this.selectedBook;

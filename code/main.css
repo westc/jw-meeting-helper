@@ -140,13 +140,13 @@ body.is-viewer {
   box-shadow: 0 0 0.25em #F00;
 }
 .image-options .option.gray {
-  color: rgb(0,0,0);
+  color: rgb(0,128,255);
   background-color: rgba(255,255,255,0.75);
   box-shadow: 0 0 0.25em rgb(255,255,255);
 }
 .image-options .option.gray:hover,
 .image-options .option.gray:hover * {
   color: rgb(255,255,255);
-  background-color: rgba(128,128,128,0.75);
-  box-shadow: 0 0 0.25em rgb(128,128,128);
+  background-color: rgba(0,128,255,0.75);
+  box-shadow: 0 0 0.25em rgb(0,128,255);
 }
