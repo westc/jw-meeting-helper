@@ -1,5 +1,5 @@
 (_ => {
-  const RGX_CUSTOM_TEXT = /(\S+(?:[^\r\n]+\S+)*)[^\r\n]([1-9]\d*):(([1-9]\d*)(?:-([1-9]\d*)|(?:([^\S\r\n]*,[^\S\r\n]*)[1-9]\d*)+)?)/g;
+  const RGX_CUSTOM_TEXT = /(\S+(?:[^\r\n]+\S+)*)(?:(?=\s)[^\r\n])+([1-9]\d*):(([1-9]\d*)(?:-([1-9]\d*)|(?:([^\S\r\n]*,[^\S\r\n]*)[1-9]\d*)+)?)/g;
   
   const BLANK_PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQYV2NgAAIAAAUAAarVyFEAAAAASUVORK5CYII=';
   const BLANK_IMAGE = {
