@@ -4,9 +4,10 @@
   const BLANK_PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQYV2NgAAIAAAUAAarVyFEAAAAASUVORK5CYII=';
   const BLANK_IMAGE = {
     cssSrc: YourJS.sub(
-      "url('{text}'), url('{blank}')",
+      "url('{textYYYY}'), url('{textBlank}'), url('{blank}')",
       {
-        text: 'code/year-text.jpg',
+        textYYYY: 'code/year-text-' + (new Date).getFullYear() + '.jpg',
+        textBlank: 'code/year-text-blank.jpg',
         blank: BLANK_PIXEL
       }
     )
